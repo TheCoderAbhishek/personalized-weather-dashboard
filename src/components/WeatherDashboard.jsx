@@ -1,5 +1,8 @@
 // src/components/WeatherDashboard.jsx
 import React, { useState, useEffect } from "react";
+// eslint-disable-next-line no-unused-vars
+import { motion } from "framer-motion";
+import { MdLocationOn } from "react-icons/md";
 import LoadingSpinner from "./common/LoadingSpinner";
 import ErrorDisplay from "./common/ErrorDisplay";
 import axios from "axios";
@@ -65,17 +68,30 @@ function WeatherDashboard({ latitude, longitude }) {
     }
   }, [latitude, longitude]);
 
+  const cardVariants = {
+    hidden: { opacity: 0, y: 50 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+  };
+
   return (
-    <div>
+    <motion.div
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      className="flex justify-center items-center p-4"
+    >
       {loading && <LoadingSpinner />}
       {error && <ErrorDisplay message={error} />}
       {location && (
-        <div className="bg-white rounded-lg shadow-md p-6 mt-4">
-          <h2 className="text-2xl font-semibold mb-4 text-center">Location</h2>
+        <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-lg shadow-md p-6 text-white w-full max-w-md">
+          <div className="flex items-center justify-center mb-4">
+            <MdLocationOn className="text-3xl mr-2" />
+            <h2 className="text-2xl font-semibold">Location</h2>
+          </div>
           <p className="text-lg text-center">{location}</p>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 
