@@ -28,9 +28,10 @@ function WeatherDashboard({ latitude, longitude }) {
       setLoading(true);
       setError(null);
       try {
+        const baseUrl = import.meta.env.VITE_BASE_URL;
         const googleApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
         const locationResponse = await axios.get(
-          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${googleApiKey}`
+          `${baseUrl}/geocode/json?latlng=${latitude},${longitude}&key=${googleApiKey}`
         );
 
         if (locationResponse.data.results?.length > 0) {
