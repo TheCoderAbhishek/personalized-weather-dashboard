@@ -2,7 +2,13 @@
 import React, { useState, useEffect, useRef } from "react";
 // eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
-import { MdLocationOn, MdPlace } from "react-icons/md";
+import {
+  MdLocationOn,
+  MdPlace,
+  MdZoomOutMap,
+  MdContentCopy,
+  MdShare,
+} from "react-icons/md";
 import LoadingSpinner from "./common/LoadingSpinner";
 import ErrorDisplay from "./common/ErrorDisplay";
 import axios from "axios";
@@ -11,20 +17,21 @@ import { Loader } from "@googlemaps/js-api-loader";
 function WeatherDashboard({ latitude, longitude }) {
   const [location, setLocation] = useState(null);
   const [address, setAddress] = useState(null);
+  const [addressComponents, setAddressComponents] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const mapRef = useRef(null);
+  const [map, setMap] = useState(null);
 
   useEffect(() => {
     const fetchLocationData = async () => {
       setLoading(true);
       setError(null);
       try {
-        const baseUrl = import.meta.env.VITE_BASE_URL;
         const googleApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
         const locationResponse = await axios.get(
-          `${baseUrl}/geocode/json?latlng=${latitude},${longitude}&key=${googleApiKey}`
+          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${googleApiKey}`
         );
 
         if (
@@ -47,7 +54,8 @@ function WeatherDashboard({ latitude, longitude }) {
             formattedLocation = "Location not found";
           }
           setLocation(formattedLocation);
-          setAddress(result.formatted_address); // Store full address
+          setAddress(result.formatted_address);
+          setAddressComponents(result.address_components);
         } else {
           setLocation("Location not found");
         }
@@ -66,36 +74,66 @@ function WeatherDashboard({ latitude, longitude }) {
 
   useEffect(() => {
     if (latitude && longitude && mapRef.current) {
-      setLoading(true); // Set loading to true when map starts loading
+      setLoading(true);
       setError(null);
       const loader = new Loader({
         apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
         version: "weekly",
+        libraries: ["places"],
       });
 
       loader
         .load()
         .then(() => {
           const google = window.google;
-          const map = new google.maps.Map(mapRef.current, {
+          const mapInstance = new google.maps.Map(mapRef.current, {
             center: { lat: latitude, lng: longitude },
             zoom: 12,
+            mapTypeId: "roadmap",
+            mapTypeControl: true,
+            zoomControl: true,
           });
 
           new google.maps.Marker({
             position: { lat: latitude, lng: longitude },
-            map: map,
+            map: mapInstance,
           });
+          setMap(mapInstance);
         })
         .catch((err) => {
           console.error("Map Load Error:", err);
           setError("Failed to load Google Maps.");
         })
         .finally(() => {
-          setLoading(false); // Set loading to false when map loading is complete
+          setLoading(false);
         });
     }
   }, [latitude, longitude]);
+
+  const handleFullScreen = () => {
+    if (map) {
+      const mapElement = map.getDiv();
+      if (mapElement.requestFullscreen) {
+        mapElement.requestFullscreen();
+      } else if (mapElement.mozRequestFullScreen) {
+        mapElement.mozRequestFullScreen();
+      } else if (mapElement.webkitRequestFullscreen) {
+        mapElement.webkitRequestFullscreen();
+      } else if (mapElement.msRequestFullscreen) {
+        mapElement.msRequestFullscreen();
+      }
+    }
+  };
+
+  const handleCopyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+  };
+
+  const handleShareLocation = () => {
+    const shareUrl = `${window.location.origin}?lat=${latitude}&lng=${longitude}`;
+    navigator.clipboard.writeText(shareUrl);
+    alert("Location URL copied to clipboard!");
+  };
 
   const cardVariants = {
     hidden: { opacity: 0, y: 50 },
@@ -112,21 +150,61 @@ function WeatherDashboard({ latitude, longitude }) {
       {loading && <LoadingSpinner />}
       {error && <ErrorDisplay message={error} />}
       {location && (
-        <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-lg shadow-md p-6 text-white w-full max-w-md">
-          <div className="flex items-center justify-center mb-4">
-            <MdLocationOn className="text-3xl mr-2 text-blue-500" />
-            <h2 className="text-2xl font-semibold">{location}</h2>
+        <div className="bg-gradient-to-br from-gray-800 to-gray-700 rounded-lg shadow-md p-6 text-white w-full max-w-lg">
+          <div className="mb-4">
+            <div className="flex items-center justify-center mb-2">
+              <MdLocationOn className="text-3xl mr-2 text-blue-500" />
+              <h2 className="text-2xl font-semibold">{location}</h2>
+            </div>
           </div>
           {address && (
-            <div className="flex items-center justify-center mb-4">
-              <MdPlace className="text-3xl mr-2 text-blue-500" />
-              <p className="text-xl ml-2">{address}</p>
+            <div className="mb-4">
+              <div className="flex items-center justify-center mb-2">
+                <MdPlace className="text-3xl mr-2 text-blue-500" />
+                <p className="text-xl ml-2">{address}</p>
+              </div>
+              <div className="flex justify-center mt-2">
+                <button
+                  onClick={() => handleCopyToClipboard(address)}
+                  className="mr-2 p-2 bg-gray-700 rounded hover:bg-gray-600"
+                >
+                  <MdContentCopy />
+                </button>
+                <button
+                  onClick={handleShareLocation}
+                  className="p-2 bg-gray-700 rounded hover:bg-gray-600"
+                >
+                  <MdShare />
+                </button>
+              </div>
             </div>
           )}
           <div
             ref={mapRef}
             style={{ height: "300px", width: "100%", marginBottom: "1rem" }}
           ></div>
+          <div className="flex justify-center">
+            <button
+              onClick={handleFullScreen}
+              className="flex items-center p-2 bg-gray-700 rounded hover:bg-gray-600"
+            >
+              <MdZoomOutMap className="mr-2" /> Full Screen
+            </button>
+          </div>
+          {addressComponents && (
+            <div className="mt-4">
+              <h3 className="text-lg font-semibold mb-2">
+                Address Components:
+              </h3>
+              <ul className="list-disc list-inside">
+                {addressComponents.map((component, index) => (
+                  <li key={index}>
+                    {component.long_name} ({component.types.join(", ")})
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </motion.div>
