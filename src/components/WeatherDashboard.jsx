@@ -1,5 +1,5 @@
 // WeatherDashboard.jsx
-import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   MdLocationOn,
@@ -20,53 +20,63 @@ function WeatherDashboard({ latitude, longitude }) {
   const [error, setError] = useState(null);
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
-  const [mapLoaded, setMapLoaded] = useState(false); // Add state to track map load
 
   useEffect(() => {
+    let isMounted = true; // Prevents memory leaks & double execution in Strict Mode
+
     if (!latitude || !longitude) return;
 
     const fetchLocationData = async () => {
       setLoading(true);
       setError(null);
       try {
+        console.log("Fetching location data...");
         const baseUrl = import.meta.env.VITE_BASE_URL;
         const googleApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-        const locationResponse = await axios.get(
+        const response = await axios.get(
           `${baseUrl}/geocode/json?latlng=${latitude},${longitude}&key=${googleApiKey}`
         );
 
-        if (locationResponse.data.results?.length > 0) {
-          const result = locationResponse.data.results[0];
+        if (response.data.results?.length > 0) {
+          const result = response.data.results[0];
           const city = result.address_components.find((comp) =>
             comp.types.includes("locality")
           );
           const country = result.address_components.find((comp) =>
             comp.types.includes("country")
           );
-          setLocation(
-            city
-              ? `${city.long_name}, ${country.short_name}`
-              : country.long_name
-          );
-          setAddress(result.formatted_address);
+
+          if (isMounted) {
+            setLocation(
+              city
+                ? `${city.long_name}, ${country.short_name}`
+                : country.long_name
+            );
+            setAddress(result.formatted_address);
+          }
         } else {
-          setLocation("Location not found");
+          if (isMounted) setLocation("Location not found");
         }
-      } catch {
-        setError("Failed to fetch location data.");
+      } catch (err) {
+        console.error("Error fetching location data:", err);
+        if (isMounted) setError("Failed to fetch location data.");
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchLocationData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [latitude, longitude]);
 
-  useLayoutEffect(() => {
-    if (!latitude || !longitude || !mapRef.current || mapLoaded) return; // Add mapLoaded check
+  useEffect(() => {
+    if (!latitude || !longitude || !mapRef.current || mapInstance.current)
+      return;
 
-    setLoading(true);
-    setError(null);
+    console.log("Initializing Google Maps...");
 
     const loader = new Loader({
       apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
@@ -77,17 +87,11 @@ function WeatherDashboard({ latitude, longitude }) {
       .load()
       .then(() => {
         if (!window.google || !mapRef.current) {
-          console.error(
-            "Google Maps failed to load, window.google:",
-            window.google,
-            "mapRef.current:",
-            mapRef.current
-          );
+          console.error("Google Maps failed to load");
           setError("Google Maps failed to load.");
-          setLoading(false);
           return;
         }
-        console.log("MapRef current:", mapRef.current);
+
         mapInstance.current = new window.google.maps.Map(mapRef.current, {
           center: { lat: latitude, lng: longitude },
           zoom: 12,
@@ -98,22 +102,16 @@ function WeatherDashboard({ latitude, longitude }) {
           position: { lat: latitude, lng: longitude },
           map: mapInstance.current,
         });
-
-        setLoading(false);
-        setMapLoaded(true); // Set mapLoaded to true after successful load
       })
       .catch((err) => {
-        console.error("Failed to load Google Maps:", err);
+        console.error("Error loading Google Maps:", err);
         setError("Failed to load Google Maps.");
-        setLoading(false);
       });
 
     return () => {
-      if (mapInstance.current) {
-        mapInstance.current = null;
-      }
+      mapInstance.current = null;
     };
-  }, [latitude, longitude, mapLoaded]); // Add mapLoaded to dependency array
+  }, [latitude, longitude]);
 
   return (
     <motion.div className="flex flex-col items-center p-4 w-full">
