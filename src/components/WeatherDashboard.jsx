@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
-// eslint-disable-next-line no-unused-vars
+// WeatherDashboard.jsx
+import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { motion } from "framer-motion";
 import {
   MdLocationOn,
@@ -20,6 +20,7 @@ function WeatherDashboard({ latitude, longitude }) {
   const [error, setError] = useState(null);
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
+  const [mapLoaded, setMapLoaded] = useState(false); // Add state to track map load
 
   useEffect(() => {
     if (!latitude || !longitude) return;
@@ -61,8 +62,8 @@ function WeatherDashboard({ latitude, longitude }) {
     fetchLocationData();
   }, [latitude, longitude]);
 
-  useEffect(() => {
-    if (!latitude || !longitude || !mapRef.current) return;
+  useLayoutEffect(() => {
+    if (!latitude || !longitude || !mapRef.current || mapLoaded) return; // Add mapLoaded check
 
     setLoading(true);
     setError(null);
@@ -76,11 +77,17 @@ function WeatherDashboard({ latitude, longitude }) {
       .load()
       .then(() => {
         if (!window.google || !mapRef.current) {
+          console.error(
+            "Google Maps failed to load, window.google:",
+            window.google,
+            "mapRef.current:",
+            mapRef.current
+          );
           setError("Google Maps failed to load.");
           setLoading(false);
           return;
         }
-
+        console.log("MapRef current:", mapRef.current);
         mapInstance.current = new window.google.maps.Map(mapRef.current, {
           center: { lat: latitude, lng: longitude },
           zoom: 12,
@@ -93,8 +100,10 @@ function WeatherDashboard({ latitude, longitude }) {
         });
 
         setLoading(false);
+        setMapLoaded(true); // Set mapLoaded to true after successful load
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("Failed to load Google Maps:", err);
         setError("Failed to load Google Maps.");
         setLoading(false);
       });
@@ -104,7 +113,7 @@ function WeatherDashboard({ latitude, longitude }) {
         mapInstance.current = null;
       }
     };
-  }, [latitude, longitude]);
+  }, [latitude, longitude, mapLoaded]); // Add mapLoaded to dependency array
 
   return (
     <motion.div className="flex flex-col items-center p-4 w-full">

@@ -8,6 +8,7 @@ function App() {
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);
   const [locationError, setLocationError] = useState(null);
+  const [loading, setLoading] = useState(true); // Add loading state
 
   useEffect(() => {
     const getLocation = () => {
@@ -16,20 +17,23 @@ function App() {
           (position) => {
             setLatitude(position.coords.latitude);
             setLongitude(position.coords.longitude);
+            setLoading(false); // Location fetched, stop loading
           },
           (error) => {
             console.error("App.js: Geolocation error:", error);
             setLocationError(error.message);
+            setLoading(false); // Error occurred, stop loading
           }
         );
       } else {
         console.error("App.js: Geolocation is not supported by this browser.");
         setLocationError("Geolocation is not supported by this browser.");
+        setLoading(false); // Geolocation not supported, stop loading
       }
     };
 
     getLocation();
-  });
+  }, []);
 
   useEffect(() => {
     console.log("App.js: Latitude:", latitude, "Longitude:", longitude);
@@ -40,10 +44,14 @@ function App() {
       <Navbar />
       <main className="container mx-auto flex-grow p-4">
         {locationError && <p>Error: {locationError}</p>}
-        {latitude && longitude ? (
+        {loading && !locationError && <p>Getting your location...</p>}
+        {latitude && longitude && !locationError && !loading ? (
           <WeatherDashboard latitude={latitude} longitude={longitude} />
         ) : (
-          <p>Getting your location...</p>
+          !loading &&
+          !locationError &&
+          !latitude &&
+          !longitude && <p>Location not available.</p>
         )}
       </main>
       <Footer />
