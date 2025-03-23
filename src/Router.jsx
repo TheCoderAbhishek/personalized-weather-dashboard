@@ -1,19 +1,62 @@
-// src/Router.jsx
-import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Layout from "./components/layout/Layout";
 import WeatherDashboard from "./components/WeatherDashboard";
-import CurrentWeather from "./components/dashboard/CurrentWeather";
+import ErrorDisplay from "./components/common/ErrorDisplay";
+import LoadingSpinner from "./components/common/LoadingSpinner";
 
-function AppRouter() {
+const Router = () => {
+  const [coords, setCoords] = useState({ latitude: null, longitude: null });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setError("Geolocation is not supported by your browser.");
+      setLoading(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCoords({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+        setLoading(false);
+      },
+      (err) => {
+        setError(
+          `Location access denied. Please enable location services. ${err}`
+        );
+        setLoading(false);
+      }
+    );
+  }, []);
+
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<WeatherDashboard />} />
-        <Route path="/current-weather" element={<CurrentWeather />} />
-        {/* Add more routes here if needed */}
-      </Routes>
-    </Router>
+    <BrowserRouter>
+      <Layout>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              loading ? (
+                <LoadingSpinner />
+              ) : error ? (
+                <ErrorDisplay message={error} />
+              ) : (
+                <WeatherDashboard
+                  latitude={coords.latitude}
+                  longitude={coords.longitude}
+                />
+              )
+            }
+          />
+        </Routes>
+      </Layout>
+    </BrowserRouter>
   );
-}
+};
 
-export default AppRouter;
+export default Router;

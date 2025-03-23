@@ -17,11 +17,18 @@ function Navbar() {
 
         <div className="hidden sm:flex space-x-4">
           <motion.a
-            href="#"
+            href="/"
             whileHover={{ scale: 1.1 }}
             className="text-white hover:text-gray-200"
           >
             Home
+          </motion.a>
+          <motion.a
+            href="/current-weather"
+            whileHover={{ scale: 1.1 }}
+            className="text-white hover:text-gray-200"
+          >
+            Current Weather
           </motion.a>
           <motion.a
             href="#"
@@ -66,11 +73,18 @@ function Navbar() {
           >
             <div className="flex flex-col space-y-2">
               <motion.a
-                href="#"
+                href="/"
                 whileHover={{ scale: 1.1 }}
                 className="text-white hover:text-gray-200"
               >
                 Home
+              </motion.a>
+              <motion.a
+                href="/current-weather"
+                whileHover={{ scale: 1.1 }}
+                className="text-white hover:text-gray-200"
+              >
+                Current Weather
               </motion.a>
               <motion.a
                 href="#"
