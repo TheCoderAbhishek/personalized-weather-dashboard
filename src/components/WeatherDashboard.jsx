@@ -23,7 +23,7 @@ function WeatherDashboard({ latitude, longitude }) {
   const mapInstance = useRef(null);
 
   useEffect(() => {
-    let isMounted = true; // Prevents memory leaks & double execution in Strict Mode
+    let isMounted = true;
 
     if (!latitude || !longitude) return;
 
